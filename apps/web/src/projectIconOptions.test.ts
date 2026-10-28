@@ -1,7 +1,12 @@
 import { AlarmClockCheck, ArrowDown01, Layers3 } from "lucide-react";
 import { describe, expect, it } from "vite-plus/test";
 import { lucideIconByName } from "./lib/lucideIconByName";
-import { filterProjectIconNames, firstEmoji } from "./projectIconOptions";
+import {
+  filterProjectEmojis,
+  filterProjectIconNames,
+  firstEmoji,
+  PROJECT_EMOJIS,
+} from "./projectIconOptions";
 
 describe("projectIconOptions", () => {
   it("resolves every offered icon name, including saved legacy spellings", () => {
@@ -18,5 +23,18 @@ describe("projectIconOptions", () => {
     expect(firstEmoji("🇺🇸 project")).toBe("🇺🇸");
     expect(firstEmoji("1️⃣ project")).toBe("1️⃣");
     expect(firstEmoji("plain text")).toBeNull();
+  });
+
+  it("searches emoji by name, then keyword, and accepts a pasted emoji", () => {
+    const emojis = (query: string) => filterProjectEmojis(query).map((option) => option.emoji);
+    expect(filterProjectEmojis("  ")).toBe(PROJECT_EMOJIS);
+    expect(emojis("Fire")[0]).toBe("🔥");
+    expect(emojis("fire")).toContain("🚒");
+    expect(emojis("lit")).toContain("🔥");
+    expect(emojis("grinning face")).toContain("😀");
+    expect(emojis("ire")).not.toContain("🔥");
+    expect(filterProjectEmojis(" 🧑‍💻 ")).toEqual([{ emoji: "🧑‍💻", label: "Technologist" }]);
+    expect(filterProjectEmojis("🫥")).toEqual([{ emoji: "🫥", label: "Dotted line face" }]);
+    expect(filterProjectEmojis("zzzqqq")).toEqual([]);
   });
 });

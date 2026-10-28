@@ -8,6 +8,7 @@ import {
 } from "@t3tools/contracts";
 import { createElement, useState } from "react";
 import {
+  filterProjectEmojis,
   filterProjectIconNames,
   firstEmoji,
   PROJECT_EMOJIS,
@@ -97,9 +98,10 @@ function ProjectIconPickerBody({
   );
   const [emoji, setEmoji] = useState(current?.kind === "emoji" ? current.emoji : "💻");
   const [query, setQuery] = useState("");
-  const [customEmoji, setCustomEmoji] = useState("");
+  const [emojiQuery, setEmojiQuery] = useState("");
 
   const icons = filterProjectIconNames(query);
+  const emojis = filterProjectEmojis(emojiQuery);
   const selectedColorClassName = projectIconColorClassName(color);
   const monogram = letters.normalize("NFKC").trim().toUpperCase();
   const validMonogram = isMonogramText(monogram);
@@ -218,40 +220,50 @@ function ProjectIconPickerBody({
           </div>
         ) : (
           <>
-            <ScrollArea scrollFade className="max-h-64">
-              <div className="grid grid-cols-8 gap-1 p-0.5 sm:grid-cols-10">
-                {PROJECT_EMOJIS.map((option) => (
-                  <button
-                    key={option.emoji}
-                    type="button"
-                    aria-label={option.label}
-                    aria-pressed={emoji === option.emoji}
-                    className={cn(
-                      "flex aspect-square items-center justify-center rounded-md border border-transparent text-xl outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      emoji === option.emoji && "border-border bg-accent",
-                    )}
-                    onClick={() => setEmoji(option.emoji)}
-                  >
-                    {option.emoji}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-            <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Or paste any emoji
-              </div>
-              <Input
-                value={customEmoji}
-                aria-label="Custom emoji"
-                placeholder="Paste an emoji"
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  setCustomEmoji(value);
-                  const nextEmoji = firstEmoji(value);
-                  if (nextEmoji) setEmoji(nextEmoji);
-                }}
-              />
+            <Input
+              type="search"
+              value={emojiQuery}
+              aria-label="Search or paste an emoji"
+              placeholder="Search or paste an emoji"
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setEmojiQuery(value);
+                const pasted = firstEmoji(value);
+                if (pasted) setEmoji(pasted);
+              }}
+            />
+            <div className="relative">
+              <ScrollArea scrollFade className="max-h-64">
+                <div className="grid grid-cols-8 gap-1 p-0.5 sm:grid-cols-10">
+                  {emojis.map((option) => (
+                    <button
+                      key={option.emoji}
+                      type="button"
+                      aria-label={option.label}
+                      aria-pressed={emoji === option.emoji}
+                      className={cn(
+                        "flex aspect-square items-center justify-center rounded-md border border-transparent text-xl outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        emoji === option.emoji && "border-border bg-accent",
+                      )}
+                      onClick={() => setEmoji(option.emoji)}
+                    >
+                      {option.emoji}
+                    </button>
+                  ))}
+                  {/* Pad to the default grid so the dialog keeps its height as results narrow. */}
+                  {Array.from(
+                    { length: Math.max(0, PROJECT_EMOJIS.length - emojis.length) },
+                    (_, i) => (
+                      <div key={`pad-${i}`} aria-hidden className="aspect-square" />
+                    ),
+                  )}
+                </div>
+              </ScrollArea>
+              {emojis.length === 0 ? (
+                <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+                  No emoji found.
+                </p>
+              ) : null}
             </div>
           </>
         )}

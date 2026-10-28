@@ -1,3 +1,4 @@
+import emojiKeywords from "emojilib";
 import { lucideIconNames } from "./lib/lucideIconByName";
 export { PROJECT_ICON_COLORS, projectIconColorClassName } from "./projectIconColors";
 
@@ -28,7 +29,12 @@ const POPULAR_PROJECT_ICONS: ReadonlyArray<string> = [
   "layers-3",
 ];
 
-export const PROJECT_EMOJIS: ReadonlyArray<{ readonly emoji: string; readonly label: string }> = [
+export interface ProjectEmojiOption {
+  readonly emoji: string;
+  readonly label: string;
+}
+
+export const PROJECT_EMOJIS: ReadonlyArray<ProjectEmojiOption> = [
   { emoji: "💻", label: "Computer" },
   { emoji: "🛠️", label: "Tools" },
   { emoji: "🚀", label: "Rocket" },
@@ -65,6 +71,50 @@ export function filterProjectIconNames(query: string): ReadonlyArray<string> {
   const normalized = query.trim().toLowerCase().replaceAll(/\s+/g, "-");
   if (!normalized) return POPULAR_PROJECT_ICONS;
   return lucideIconNames.filter((name) => name.includes(normalized)).slice(0, 60);
+}
+
+function normalizeEmojiTerm(term: string): string {
+  return term
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[\s_]+/g, " ");
+}
+
+// emojilib lists each emoji's CLDR name first, in snake_case, then looser keywords.
+const searchableEmojis = Object.entries(emojiKeywords).map(([emoji, [name = "", ...keywords]]) => {
+  const label = normalizeEmojiTerm(name);
+  return {
+    emoji,
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    name: ` ${label}`,
+    keywords: keywords.map((keyword) => ` ${normalizeEmojiTerm(keyword)}`),
+  };
+});
+
+export function filterProjectEmojis(query: string): ReadonlyArray<ProjectEmojiOption> {
+  const pasted = firstEmoji(query);
+  if (pasted) {
+    const label = searchableEmojis.find((option) => option.emoji === pasted)?.label;
+    return [{ emoji: pasted, label: label ?? "Custom emoji" }];
+  }
+  const normalized = normalizeEmojiTerm(query);
+  if (!normalized) return PROJECT_EMOJIS;
+  const wordStart = ` ${normalized}`;
+  return searchableEmojis
+    .flatMap((option) => {
+      const score =
+        option.name === wordStart
+          ? 0
+          : option.name.includes(wordStart)
+            ? 1
+            : option.keywords.some((keyword) => keyword.includes(wordStart))
+              ? 2
+              : null;
+      return score === null ? [] : [{ option, score }];
+    })
+    .toSorted((a, b) => a.score - b.score)
+    .slice(0, 60)
+    .map(({ option }) => option);
 }
 
 export function firstEmoji(value: string): string | null {
